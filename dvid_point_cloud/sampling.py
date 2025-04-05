@@ -11,6 +11,10 @@ from .parse import parse_rles
 
 logger = logging.getLogger(__name__)
 
+class InstanceError(Exception):
+    """Custom exception for errors related to retrieving DVID instance data."""
+    pass
+
 def accurate_sample_rles(starts_zyx: np.ndarray, lengths: np.ndarray, num_points: int) -> np.ndarray:
     """
     Generate a point cloud sample from run-length encoded data using vectorized operations.
@@ -94,6 +98,46 @@ def fast_sample_rles(starts_zyx: np.ndarray, lengths: np.ndarray, num_points: in
     
     return points_zyx
 
+def uniform_auto_scale(server: str, uuid: str, label_id: int, count: int,
+                    density: float = 0.01,
+                    instance: str = "segmentation",
+                    supervoxels: bool = False,
+                    output_format: str = "xyz",
+                    sample_from_rles_func: Callable = fast_sample_rles) -> Union[None, np.ndarray, pd.DataFrame]:
+    """
+    Generate a point cloud for a DVID label using automatic scale selection for
+    the given count to maintain at least the suggested sampling density. 
+    """
+    client = DVIDClient(server)
+    try:
+        info = client.get_info(uuid, instance)
+        max_scale = info['Extended']['MaxDownresLevel']
+    except Exception as e:
+        logger.error(f"Error retrieving instance info for {uuid}/{instance}: {e}")
+        raise InstanceError(f"Could not retrieve instance info for {uuid}/{instance}")
+    
+    sparse_vol_stats = client.get_sparse_vol_stats(uuid, instance, label_id)
+
+    scaling = sparse_vol_stats.num_voxels / (count / density)
+    if scaling <= 1:
+        scale = 0
+    else:
+        scale = int(np.floor(np.log2(scaling)))
+    if scale > max_scale:
+        raise ValueError(f"Required scale {scale} exceeds max scale {max_scale} for instance {instance}")
+    
+    return uniform_sample(
+        server=server,
+        uuid=uuid,
+        label_id=label_id,
+        density_or_count=count,
+        instance=instance,
+        scale=scale,
+        supervoxels=supervoxels,
+        output_format=output_format,
+        sample_from_rles_func=sample_from_rles_func
+    )
+
 
 def uniform_sample(server: str, uuid: str, label_id: int, 
                   density_or_count: Union[float, int],
@@ -103,7 +147,8 @@ def uniform_sample(server: str, uuid: str, label_id: int,
                   output_format: str = "xyz",
                   sample_from_rles_func: Callable = fast_sample_rles) -> Union[np.ndarray, pd.DataFrame]:
     """
-    Generate a uniform point cloud sample from a DVID label using a vectorized approach.
+    Generate a uniform point cloud sample from a DVID label using a vectorized approach
+    and at the requested scale.
     
     Args:
         server: DVID server URL

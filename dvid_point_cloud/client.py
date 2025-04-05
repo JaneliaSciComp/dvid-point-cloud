@@ -1,12 +1,20 @@
 """Client for interacting with DVID HTTP API."""
 
 import logging
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict
+from dataclasses import dataclass
 
 import requests
 
 logger = logging.getLogger(__name__)
 
+@dataclass
+class SparseVolumeStats:
+    """Class to hold statistics about a sparse volume."""
+    num_voxels: int
+    num_blocks: int
+    min_voxel: tuple
+    max_voxel: tuple
 
 class DVIDClient:
     """Client for making HTTP requests to DVID server."""
@@ -24,6 +32,50 @@ class DVIDClient:
         self.session = requests.Session()
 
 
+    def get_info(self, uuid: str, instance: str) -> Dict[str, Any]:
+        """
+        Get instance info from DVID.
+        
+        Args:
+            uuid: UUID of the DVID node
+            instance: Name of the data instance
+
+        Returns:
+            Dictionary of instance info
+        """
+        url = f"{self.server}/api/node/{uuid}/{instance}/info"
+        logger.debug(f"GET request to {url}")
+        
+        response = self.session.get(url, timeout=self.timeout)
+        response.raise_for_status()
+        
+        return response.json()
+
+    def get_sparse_vol_stats(self, uuid: str, instance: str, label_id: int) -> SparseVolumeStats:
+        """
+        Get sparse volume statistics for a specific label ID.
+        
+        Args:
+            uuid: UUID of the DVID node
+            instance: Name of the labelmap instance (usually 'segmentation')
+            label_id: Label ID to query
+
+        Returns:
+            SparseVolumeStats object containing # voxels, # blocks, min/max voxel coords
+        """
+        url = f"{self.server}/api/node/{uuid}/{instance}/sparsevol-size/{label_id}"
+        
+        response = self.session.get(url, timeout=self.timeout)
+        response.raise_for_status()
+        data = response.json()
+
+        return SparseVolumeStats(
+            num_voxels=data["voxels"],
+            num_blocks=data["numblocks"],
+            min_voxel=tuple(data["minvoxel"]),
+            max_voxel=tuple(data["maxvoxel"])
+        )
+    
     def get_sparse_vol(self, uuid: str, instance: str, label_id: int, 
                    format: str = "rles", scale: int = 0, supervoxels: bool = False) -> bytes:
         """
@@ -56,25 +108,6 @@ class DVIDClient:
         
         return response.content
         
-    def get_info(self, uuid: str, instance: str) -> Dict[str, Any]:
-        """
-        Get instance info from DVID.
-        
-        Args:
-            uuid: UUID of the DVID node
-            instance: Name of the data instance
-
-        Returns:
-            Dictionary of instance info
-        """
-        url = f"{self.server}/api/node/{uuid}/{instance}/info"
-        logger.debug(f"GET request to {url}")
-        
-        response = self.session.get(url, timeout=self.timeout)
-        response.raise_for_status()
-        
-        return response.json()
-
     def get_label_blocks(self, uuid: str, instance: str, block_coords: str, 
                           scale: int = 0, supervoxels: bool = False) -> bytes:
         """

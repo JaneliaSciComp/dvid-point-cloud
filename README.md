@@ -69,6 +69,22 @@ Sample a specific number of points instead of a density:
 points = dpc.uniform_sample(server, uuid, label_id, 1000)
 ```
 
+### Automatic scale selection
+
+If you specify the number of sample points and the density of sampling,
+the `uniform_auto_scale` function will determine the best scale (downsampling)
+given the # of voxels associated with the given label.
+
+```python
+points = dpc.uniform_auto_scale(server, uuid, label_id, count=1000, density=0.01)
+```
+
+If the sparse volume for the label is too large to meet the sampling density with
+the given number of points at any level, it will return a `ValueError` exception.
+This is useful if you want to avoid using neurons that may be too large for your
+given point budget.
+
+
 ### DataFrame Output
 
 Get results as a pandas DataFrame:

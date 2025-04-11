@@ -9,7 +9,7 @@ import pytest
 
 from dvid_point_cloud.client import DVIDClient
 from dvid_point_cloud.parse import parse_rles, rles_to_points
-from dvid_point_cloud.sampling import uniform_sample
+from dvid_point_cloud.sampling import uniform_sample, sample_supervoxels
 
 
 def test_parse_rles(create_sparse_volume):
@@ -62,6 +62,15 @@ def test_rles_to_points():
     # Check that points match expected
     np.testing.assert_array_equal(points, expected)
 
+
+def test_sample_supervoxels():
+    """Test that the label at a point is correctly returned."""
+    server = "https://hemibrain-dvid.janelia.org"
+    uuid = "15aee239283143c08b827177ebee01b3"
+    instance = "segmentation"
+    body_id = 1137590955
+    supervoxels = sample_supervoxels(server, uuid, instance, body_id)
+    assert supervoxels.shape == (4911,)
 
 def test_uniform_sample_integration(mock_server, create_sparse_volume, generate_sparse_volume):
     """Integration test for uniform_sample function."""

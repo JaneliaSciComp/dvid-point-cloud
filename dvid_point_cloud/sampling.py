@@ -214,6 +214,35 @@ def uniform_sample(server: str, uuid: str, label_id: int,
         return pd.DataFrame(points_xyz, columns=["x", "y", "z"])
     else:
         return points_xyz
+    
+def sample_supervoxels(server: str, uuid: str, instance: str, body_id: int):
+    """
+    Sample supervoxel IDs for a body ID.
+    """
+    client = DVIDClient(server)
+    response = client.get_supervoxels(uuid, instance, body_id)
+
+    return response
+
+def sample_supervoxels_for_bodies(server: str, uuid: str, instance: str, body_ids: List[int]):
+    """
+    Sample supervoxel IDs for multiple bodies.
+    """
+    result = {}
+    for body_id in body_ids:
+        try:
+            supervoxel_ids = sample_supervoxels(server, uuid, instance, body_id)
+
+            # If points were returned (non-empty body), add to result
+            if isinstance(supervoxel_ids, pd.DataFrame) and not supervoxel_ids.empty:
+                result[body_id] = supervoxel_ids
+            elif isinstance(supervoxel_ids, np.ndarray) and supervoxel_ids.shape[0] > 0:
+                result[body_id] = supervoxel_ids
+            
+        except Exception as e:
+            logger.error(f"Error sampling supervoxels for body {body_id}: {e}")
+
+    return result
 
 
 def sample_for_bodies(server: str, uuid: str, instance: str, body_ids: List[int], 

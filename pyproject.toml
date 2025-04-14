@@ -2,6 +2,40 @@
 requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "dvid-point-cloud"
+version = "0.1.2"
+description = "Library for creating point clouds for sparse volumes within DVID"
+readme = "README.md"
+requires-python = ">=3.7"
+license = {text = "BSD-3-Clause"}
+authors = [
+    {name = "William Katz", email = "katzw@hhmi.org"},
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "requests>=2.25.0",
+    "numpy>=1.19.0",
+    "pandas>=1.2.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/JaneliaSciComp/dvid-point-cloud"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0.0",
+    "requests-mock>=1.9.0",
+    "pytest-cov>=2.11.0",
+    "flake8>=3.8.0",
+    "mypy>=0.790",
+]
+
+# Your existing tool configurations
 [tool.black]
 line-length = 88
 

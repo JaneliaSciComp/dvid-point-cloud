@@ -20,6 +20,68 @@ def test_dvid_client_initialization():
     assert client.timeout == 120
 
 
+def test_label_at_point():
+    """Test that the label at a point is correctly returned."""
+    server = "https://hemibrain-dvid.janelia.org"
+    uuid = "15aee239283143c08b827177ebee01b3"
+    instance = "segmentation"
+    point = (20000, 30000, 33000)
+    client = DVIDClient(server, timeout=120)
+    label = client.get_label(uuid, instance, point)
+    assert label == 2351004142
+
+def test_labels_at_multiple_points():
+    """Test that the label at a point is correctly returned."""
+    server = "https://hemibrain-dvid.janelia.org"
+    uuid = "15aee239283143c08b827177ebee01b3"
+    instance = "segmentation"
+    points = [[20000, 30000, 33000], [20000, 30000, 35000]]
+    client = DVIDClient(server, timeout=120)
+    labels = client.get_labels(uuid, instance, points)
+    assert labels == [2351004142, 2261637853]
+
+def test_supervoxel_at_point():
+    """Test that the label at a point is correctly returned."""
+    server = "https://hemibrain-dvid.janelia.org"
+    uuid = "15aee239283143c08b827177ebee01b3"
+    instance = "segmentation"
+    point = (20000, 30000, 35000)
+    client = DVIDClient(server, timeout=120)
+    label = client.get_label(uuid, instance, point, supervoxels=True)
+    assert label == 2353058939
+
+def test_sample_supervoxels(mock_server):
+    """Test that supervoxel sampling works correctly."""
+    # Set up test parameters
+    server = "http://test-server"
+    uuid = "test-uuid"
+    instance = "segmentation"
+    body_id = 42
+    
+    # Create mock response content
+    mock_supervoxels = [2351004142, 2353058939]
+    mock_content = json.dumps(mock_supervoxels).encode('utf-8')
+    
+    # Configure mock server
+    mock_server.get(f"{server}/api/node/{uuid}/{instance}/supervoxels/{body_id}",
+                   content=mock_content)
+    
+    # Call sample_supervoxels
+    client = DVIDClient(server, timeout=120)
+    supervoxels = client.get_supervoxels(uuid, instance, body_id)
+    
+    # Check that the response is correct
+    assert isinstance(supervoxels, np.ndarray)
+    assert supervoxels.dtype == np.int64
+    np.testing.assert_array_equal(supervoxels, np.array(mock_supervoxels))
+    
+    # Check that the request was made correctly
+    assert mock_server.called
+    assert mock_server.call_count == 1
+    
+    request = mock_server.request_history[0]
+    assert request.method == "GET"
+    assert request.url == f"{server}/api/node/{uuid}/{instance}/supervoxels/{body_id}"
 
 
 def test_get_sparse_vol(mock_server):

@@ -172,6 +172,38 @@ print(json.dumps(layer_json))
 # or use it programmatically with the Neuroglancer Python API
 ```
 
+### Additional helper functions in DVIDClient
+
+First get the client for a particular DVID server:
+
+```python
+client = DVIDClient(server)
+```
+
+Get the label at a point:
+
+```python
+label = client.get_label(uuid, instance, point, supervoxels=supervoxels)  
+```
+
+Get the labels at a list of points:
+
+```python
+response = client.get_labels(uuid, instance, points, supervoxels=supervoxels)  
+```
+
+Get supervoxel ids for a label id:
+
+```python
+supervoxel_ids = client.get_supervoxels(uuid, instance, body_id)
+```
+
+Get supervoxel ids for a list of label ids, returning a dict with label ids as keys:
+
+```python
+dict_of_label_supervoxels = client.get_supervoxels_for_bodies(uuid, instance, [101, 102, 103])
+```
+
 ## Requirements
 
 - Python 3.7+

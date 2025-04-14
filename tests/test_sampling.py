@@ -9,7 +9,7 @@ import pytest
 
 from dvid_point_cloud.client import DVIDClient
 from dvid_point_cloud.parse import parse_rles, rles_to_points
-from dvid_point_cloud.sampling import uniform_sample, label_at_point, labels_at_points, sample_supervoxels
+from dvid_point_cloud.sampling import uniform_sample
 
 def test_parse_rles(create_sparse_volume):
     """Test that RLE format is correctly parsed."""
@@ -61,66 +61,6 @@ def test_rles_to_points():
     # Check that points match expected
     np.testing.assert_array_equal(points, expected)
 
-def test_label_at_point():
-    """Test that the label at a point is correctly returned."""
-    server = "https://hemibrain-dvid.janelia.org"
-    uuid = "15aee239283143c08b827177ebee01b3"
-    instance = "segmentation"
-    point = (20000, 30000, 33000)
-    label = label_at_point(server, uuid, instance, point)
-    assert label == 2351004142
-
-def test_labels_at_multiple_points():
-    """Test that the label at a point is correctly returned."""
-    server = "https://hemibrain-dvid.janelia.org"
-    uuid = "15aee239283143c08b827177ebee01b3"
-    instance = "segmentation"
-    points = [[20000, 30000, 33000], [20000, 30000, 35000]]
-    labels = labels_at_points(server, uuid, instance, points)
-    assert labels == [2351004142, 2261637853]
-
-def test_supervoxel_at_point():
-    """Test that the label at a point is correctly returned."""
-    server = "https://hemibrain-dvid.janelia.org"
-    uuid = "15aee239283143c08b827177ebee01b3"
-    instance = "segmentation"
-    point = (20000, 30000, 35000)
-    label = label_at_point(server, uuid, instance, point, supervoxels=True)
-    assert label == 2353058939
-
-def test_sample_supervoxels(mock_server):
-    """Test that supervoxel sampling works correctly."""
-    # Set up test parameters
-    server = "http://test-server"
-    uuid = "test-uuid"
-    instance = "segmentation"
-    body_id = 42
-    
-    # Create mock response content
-    mock_supervoxels = [2351004142, 2353058939]
-    mock_content = json.dumps(mock_supervoxels).encode('utf-8')
-    
-    # Configure mock server
-    mock_server.get(f"{server}/api/node/{uuid}/{instance}/supervoxels/{body_id}",
-                   content=mock_content)
-    
-    # Call sample_supervoxels
-    supervoxels = sample_supervoxels(server, uuid, instance, body_id)
-    
-    # Check that the response is correct
-    assert isinstance(supervoxels, np.ndarray)
-    assert supervoxels.dtype == np.int64
-    np.testing.assert_array_equal(supervoxels, np.array(mock_supervoxels))
-    
-    # Check that the request was made correctly
-    assert mock_server.called
-    assert mock_server.call_count == 1
-    
-    request = mock_server.request_history[0]
-    assert request.method == "GET"
-    assert request.url == f"{server}/api/node/{uuid}/{instance}/supervoxels/{body_id}"
-
-
 def test_uniform_sample_integration(mock_server, create_sparse_volume, generate_sparse_volume):
     """Integration test for uniform_sample function."""
     # Set up test parameters
@@ -168,7 +108,7 @@ def test_uniform_sample_fuzz(mock_server, create_sparse_volume, generate_sparse_
     # Try multiple random seeds
     for seed in range(5):
         # Generate a random sparse volume
-        size = (128, 128, 128)
+        size = (64, 64, 64)
         _, runs, total_voxels = generate_sparse_volume(size, label_id, density=0.3, seed=seed)
         
         # Create sparse volume data

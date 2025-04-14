@@ -10,6 +10,8 @@ import ast
 import numpy as np
 from numpy.typing import NDArray
 
+import pandas as pd
+
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -91,7 +93,7 @@ class DVIDClient:
             supervoxels: If True, returns supervoxel data instead of agglomerated body data
 
         Returns:
-            Binary encoded label data
+            Label ID integer at the specified point
 
         """
         url = f"{self.server}/api/node/{uuid}/{instance}/label/{point[0]}_{point[1]}_{point[2]}"
@@ -138,6 +140,14 @@ class DVIDClient:
     def get_supervoxels(self, uuid: str, instance: str, body_id: int) -> NDArray[np.int64]:
         """
         Get supervoxel IDs for a specific body ID.
+
+        Args:
+            uuid: UUID of the DVID node
+            instance: Name of the labelmap instance (usually 'segmentation')
+            body_id: Body ID to query
+
+        Returns:
+            Array of supervoxel IDs
         """
         url = f"{self.server}/api/node/{uuid}/{instance}/supervoxels/{body_id}"
         response = self.session.get(url, timeout=self.timeout)
@@ -149,6 +159,36 @@ class DVIDClient:
         response = np.array(response, dtype=np.int64)
 
         return response
+
+
+    def get_supervoxels_for_bodies(self, uuid: str, instance: str, body_ids: List[int]):
+        """
+        Sample supervoxel IDs for multiple bodies.
+
+        Args:
+            uuid: UUID of the DVID node
+            instance: Name of the labelmap instance (usually 'segmentation')
+            body_ids: List of body IDs to sample supervoxels for
+
+        Returns:
+            Dictionary mapping body IDs to their corresponding supervoxel IDs
+        """
+        result = {}
+        for body_id in body_ids:
+            try:
+                supervoxel_ids = self.get_supervoxels(uuid, instance, body_id)
+
+                # If points were returned (non-empty body), add to result
+                if isinstance(supervoxel_ids, pd.DataFrame) and not supervoxel_ids.empty:
+                    result[body_id] = supervoxel_ids
+                elif isinstance(supervoxel_ids, np.ndarray) and supervoxel_ids.shape[0] > 0:
+                    result[body_id] = supervoxel_ids
+                
+            except Exception as e:
+                logger.error(f"Error sampling supervoxels for body {body_id}: {e}")
+
+        return result
+
 
     def get_sparse_vol(self, uuid: str, instance: str, label_id: int, 
                    format: str = "rles", scale: int = 0, supervoxels: bool = False) -> bytes:

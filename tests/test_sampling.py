@@ -9,8 +9,7 @@ import pytest
 
 from dvid_point_cloud.client import DVIDClient
 from dvid_point_cloud.parse import parse_rles, rles_to_points
-from dvid_point_cloud.sampling import uniform_sample, sample_supervoxels
-
+from dvid_point_cloud.sampling import uniform_sample, label_at_point, labels_at_points, sample_supervoxels
 
 def test_parse_rles(create_sparse_volume):
     """Test that RLE format is correctly parsed."""
@@ -62,6 +61,32 @@ def test_rles_to_points():
     # Check that points match expected
     np.testing.assert_array_equal(points, expected)
 
+def test_label_at_point():
+    """Test that the label at a point is correctly returned."""
+    server = "https://hemibrain-dvid.janelia.org"
+    uuid = "15aee239283143c08b827177ebee01b3"
+    instance = "segmentation"
+    point = (20000, 30000, 33000)
+    label = label_at_point(server, uuid, instance, point)
+    assert label == 2351004142
+
+def test_labels_at_multiple_points():
+    """Test that the label at a point is correctly returned."""
+    server = "https://hemibrain-dvid.janelia.org"
+    uuid = "15aee239283143c08b827177ebee01b3"
+    instance = "segmentation"
+    points = [[20000, 30000, 33000], [20000, 30000, 35000]]
+    labels = labels_at_points(server, uuid, instance, points)
+    assert labels == [2351004142, 2261637853]
+
+def test_supervoxel_at_point():
+    """Test that the label at a point is correctly returned."""
+    server = "https://hemibrain-dvid.janelia.org"
+    uuid = "15aee239283143c08b827177ebee01b3"
+    instance = "segmentation"
+    point = (20000, 30000, 35000)
+    label = label_at_point(server, uuid, instance, point, supervoxels=True)
+    assert label == 2353058939
 
 def test_sample_supervoxels(mock_server):
     """Test that supervoxel sampling works correctly."""

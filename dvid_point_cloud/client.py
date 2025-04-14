@@ -1,8 +1,9 @@
 """Client for interacting with DVID HTTP API."""
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, List
 from dataclasses import dataclass
+import json
 
 import requests
 import ast
@@ -79,6 +80,61 @@ class DVIDClient:
             max_voxel=tuple(data["maxvoxel"])
         )
     
+    def get_label(self, uuid: str, instance: str, point: tuple[int, int, int], supervoxels: bool = False) -> int:
+        """
+        Get label data for a specific point.
+        
+        Args:
+            uuid: UUID of the DVID node
+            instance: Name of the labelmap instance (usually 'segmentation')
+            point: Tuple of (x, y, z) coordinates
+            supervoxels: If True, returns supervoxel data instead of agglomerated body data
+
+        Returns:
+            Binary encoded label data
+
+        """
+        url = f"{self.server}/api/node/{uuid}/{instance}/label/{point[0]}_{point[1]}_{point[2]}"
+
+        params = {}
+        if supervoxels:
+            params["supervoxels"] = "true"
+
+        logger.debug(f"GET request to {url} with params {params}")
+        
+        response = self.session.get(url, params=params, timeout=self.timeout)
+        response.raise_for_status()
+        data = json.loads(response.content)
+        label = data["Label"]
+        
+        return label
+
+    def get_labels(self, uuid: str, instance: str, points: List[List[int]], supervoxels: bool = False) -> List[int]:
+        """
+        Get label data for multiple points.
+        
+        Args:
+            uuid: UUID of the DVID node
+            instance: Name of the labelmap instance (usually 'segmentation')
+            points: List of Lists of (x, y, z) coordinates
+            supervoxels: If True, returns supervoxel data instead of agglomerated body data
+
+        Returns:
+            List of label IDs for each point
+        """
+        url = f"{self.server}/api/node/{uuid}/{instance}/labels"
+        
+        params = {}
+        if supervoxels:
+            params["supervoxels"] = "true"
+            
+        logger.debug(f"GET request to {url} with params {params}")
+        
+        response = self.session.get(url, params=params, json=points, timeout=self.timeout)
+        response.raise_for_status()
+        
+        return response.json()
+        
     def get_supervoxels(self, uuid: str, instance: str, body_id: int) -> NDArray[np.int64]:
         """
         Get supervoxel IDs for a specific body ID.
